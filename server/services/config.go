@@ -1,14 +1,17 @@
 package services
 
 import (
+	//"bufio"
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
 
 	"encoding/base64"
-	"io/ioutil"
+	//"io/ioutil"
 	"path"
-	"strings"
+	//"strings"
 
 	"github.com/joho/godotenv"
 
@@ -16,17 +19,17 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/mail"
 	"os"
 	"sync"
 )
 
 var MutexJson sync.Mutex
-var JSonGeneral models.JsonFinal
 
 func ListAllFolders(folderName string) ([]string, []string) {
 	files, err := os.ReadDir(folderName)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	var listFolders []string
 	var listFiles []string
@@ -59,7 +62,7 @@ func DivideFolders(list []string, numParts int) [][]string {
 }
 
 func ListFiles(folderName string) []string {
-	files, err := ioutil.ReadDir(folderName)
+	files, err := os.ReadDir(folderName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,30 +88,13 @@ func parseData(dataLines *bufio.Scanner) models.Email {
 			data.To = line[3:]
 		case strings.Contains(line, "Subject:"):
 			data.Subject = line[8:]
-		case strings.Contains(line, "Cc:"):
-			data.Cc = line[3:]
-		case strings.Contains(line, "Mime-Version:"):
-			data.Mime_Version = line[13:]
-		case strings.Contains(line, "Content-Type:"):
-			data.Content_Type = line[13:]
-		case strings.Contains(line, "Content-Transfer-Encoding:"):
-			data.Content_Transfer_Encoding = line[26:]
-		case strings.Contains(line, "X-cc:"):
-			data.X_cc = line[5:]
-		case strings.Contains(line, "X-bcc:"):
-			data.X_bcc = line[6:]
-		case strings.Contains(line, "X-Folder:"):
-			data.X_Folder = line[9:]
-		case strings.Contains(line, "X-Origin:"):
-			data.X_Origin = line[9:]
-		case strings.Contains(line, "X-FileName:"):
-			data.X_FileName = line[11:]
 		default:
 			data.Body += line
 		}
 	}
 	return data
 }
+
 func Algodeaca(folderList []string, path string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
@@ -116,14 +102,13 @@ func Algodeaca(folderList []string, path string, wg *sync.WaitGroup) {
 	for _, user := range folderList {
 
 		var jsonForBulk models.JsonBulk
-		jsonForBulk.Index = "email"
 
 		fmt.Println(user)
 
 		processDir(path+user, &jsonForBulk)
 
 		IndexDataBulk(jsonForBulk)
-		jsonForBulk.Records = []models.Email{}
+		jsonForBulk = models.JsonBulk{}
 
 	}
 
@@ -132,18 +117,36 @@ func Algodeaca(folderList []string, path string, wg *sync.WaitGroup) {
 func ProcessMailFile(path string, jsonForBulk *models.JsonBulk, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	sysFile, err := os.Open(path)
+	sysFile, err := os.ReadFile(path)
 	if err != nil {
 		log.Printf("Error opening file: %s\n", err)
 		return
 	}
-	defer sysFile.Close()
 
-	lines := bufio.NewScanner(sysFile)
+	r := bytes.NewReader(sysFile)
+	m, err := mail.ReadMessage(r)
+	if err != nil {
+		fmt.Printf("ISSUE WHILE READING EMAIL: %s\n", err)
+		fmt.Printf("PATH TO MAIL: %s\n", path)
+		data := bytes.NewReader(sysFile)
+		lines := bufio.NewScanner(data)
+		newEmail := parseData(lines)
+		jsonForBulk.Records = append(jsonForBulk.Records, newEmail)
+		return
+	}
+	body, err := io.ReadAll(m.Body)
+	if err != nil {
+		fmt.Println("aca se rompe")
+	}
 
-	data := parseData(lines)
-
-	IndexData(data, jsonForBulk)
+	newEmail := models.Email{
+		Message_ID: path,
+		From:       m.Header.Get("From"),
+		To:         m.Header.Get("To"),
+		Subject:    m.Header.Get("Subject"),
+		Body:       string(body),
+	}
+	jsonForBulk.Records = append(jsonForBulk.Records, newEmail)
 
 }
 
@@ -184,21 +187,17 @@ func IndexDataBulk(jsonForBulk models.JsonBulk) {
 	defer resp.Body.Close()
 }
 
-func IndexData(data models.Email, jsonForBulk *models.JsonBulk) {
-
-	jsonForBulk.Records = append(jsonForBulk.Records, data)
-}
-
 func processDir(name string, jsonForBulk *models.JsonBulk) {
 	d, err := os.Open(name)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
+
 	defer d.Close()
 
 	files, err := d.ReadDir(-1)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
 
 	for _, f := range files {
@@ -211,4 +210,5 @@ func processDir(name string, jsonForBulk *models.JsonBulk) {
 			wg.Wait()
 		}
 	}
+
 }

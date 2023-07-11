@@ -57,7 +57,28 @@ func IndexStart() {
 
 }
 
-func SearchEmails(text *string) models.EmailResponse {
+/* func SearchEmails(text *string) models.EmailResponse {
+
+var respuesta models.EmailResponse
+now := time.Now()
+startTime := now.AddDate(0, 0, -7).Format("2006-01-02T15:04:05Z07:00")
+endTime := now.Format("2006-01-02T15:04:05Z07:00")
+
+fmt.Println(*text)
+
+query := fmt.Sprintf(`{
+	"search_type": "match",
+	"query": {
+		"term":       "`+*text+`, ",
+		"start_time": "%s",
+		"end_time":   "%s"
+	},
+	"from":        0,
+	"max_results": 20,
+	"_source":     []
+}`, startTime, endTime) */
+
+func SearchEmails(text *string, pageNum int) models.EmailResponse {
 
 	var respuesta models.EmailResponse
 	now := time.Now()
@@ -66,17 +87,21 @@ func SearchEmails(text *string) models.EmailResponse {
 
 	fmt.Println(*text)
 
+	from := pageNum * 20
+	fmt.Print("from:")
+	fmt.Println(from)
+
 	query := fmt.Sprintf(`{
-		"search_type": "match",
-		"query": {
-			"term":       "`+*text+`, ",
-			"start_time": "%s",
-			"end_time":   "%s"
-		},
-		"from":        0,
-		"max_results": 20,
-		"_source":     []
-	}`, startTime, endTime)
+			"search_type": "match",
+			"query": {
+				"term":       "`+*text+`, ",
+				"start_time": "%s",
+				"end_time":   "%s"
+			},
+			"from": %d,
+			"max_results": 20,
+			"_source":     []
+		}`, startTime, endTime, from)
 
 	req, err := http.NewRequest("POST", "http://localhost:4080/api/emails/_search", strings.NewReader(query))
 	if err != nil {

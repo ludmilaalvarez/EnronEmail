@@ -4,6 +4,7 @@ import (
 	"EnronEmailApi/services"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"net/http"
 
@@ -19,10 +20,19 @@ func IndexerEnron(w http.ResponseWriter, r *http.Request) {
 
 func SearchEmails(w http.ResponseWriter, r *http.Request) {
 	text := chi.URLParam(r, "text")
+	pageNum := r.URL.Query().Get("page")
+	fmt.Println(pageNum)
+	numero, err := strconv.Atoi(pageNum)
+
+	fmt.Println(numero)
+	if err != nil {
+		http.Error(w, "Número de página inválido", http.StatusBadRequest)
+		return
+	}
 
 	fmt.Println(text)
 
-	respuesta := services.SearchEmails(&text)
+	respuesta := services.SearchEmails(&text, numero)
 
 	json.NewEncoder(w).Encode(respuesta.Hits.Hits)
 }
