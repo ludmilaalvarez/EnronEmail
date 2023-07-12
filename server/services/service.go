@@ -38,7 +38,7 @@ func IndexStart() {
 	wg.Add(5)
 
 	for index := range dividedFolders {
-		go Algodeaca(dividedFolders[index], path, &wg)
+		go HandleFolderList(dividedFolders[index], path, &wg)
 	}
 
 	wg.Wait()
@@ -87,7 +87,7 @@ func SearchEmails(text *string, pageNum int) models.EmailResponse {
 
 	fmt.Println(*text)
 
-	from := pageNum * 20
+	from := pageNum * 15
 	fmt.Print("from:")
 	fmt.Println(from)
 
@@ -99,7 +99,7 @@ func SearchEmails(text *string, pageNum int) models.EmailResponse {
 				"end_time":   "%s"
 			},
 			"from": %d,
-			"max_results": 20,
+			"max_results": 15,
 			"_source":     []
 		}`, startTime, endTime, from)
 

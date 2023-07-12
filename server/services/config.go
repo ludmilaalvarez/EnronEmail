@@ -1,30 +1,23 @@
 package services
 
 import (
-	//"bufio"
+	"EnronEmailApi/models"
 	"bufio"
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
-
-	"encoding/base64"
-	//"io/ioutil"
-	"path"
-	//"strings"
-
-	"github.com/joho/godotenv"
-
-	"EnronEmailApi/models"
-	"encoding/json"
 	"log"
 	"net/http"
 	"net/mail"
 	"os"
+	"path"
+	"strings"
 	"sync"
-)
 
-var MutexJson sync.Mutex
+	"github.com/joho/godotenv"
+)
 
 func ListAllFolders(folderName string) ([]string, []string) {
 	files, err := os.ReadDir(folderName)
@@ -35,12 +28,12 @@ func ListAllFolders(folderName string) ([]string, []string) {
 	var listFiles []string
 	for _, f := range files {
 		if f.IsDir() {
-			listFiles = append(listFiles, f.Name())
-		} else {
 			listFolders = append(listFolders, f.Name())
+		} else {
+			listFiles = append(listFiles, f.Name())
 		}
 	}
-	return listFiles, listFolders
+	return listFolders, listFiles
 }
 
 func DivideFolders(list []string, numParts int) [][]string {
@@ -95,7 +88,7 @@ func parseData(dataLines *bufio.Scanner) models.Email {
 	return data
 }
 
-func Algodeaca(folderList []string, path string, wg *sync.WaitGroup) {
+func HandleFolderList(folderList []string, path string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -136,7 +129,7 @@ func ProcessMailFile(path string, jsonForBulk *models.JsonBulk, wg *sync.WaitGro
 	}
 	body, err := io.ReadAll(m.Body)
 	if err != nil {
-		fmt.Println("aca se rompe")
+		fmt.Println("Error while reading mail's body")
 	}
 
 	newEmail := models.Email{
@@ -154,7 +147,7 @@ func IndexDataBulk(jsonForBulk models.JsonBulk) {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error al cargar el archivo .env")
+		log.Fatal("Error while loading .env file")
 	}
 
 	var (
@@ -193,12 +186,12 @@ func processDir(name string, jsonForBulk *models.JsonBulk) {
 		log.Println(err.Error())
 	}
 
-	defer d.Close()
-
 	files, err := d.ReadDir(-1)
 	if err != nil {
 		log.Println(err.Error())
 	}
+
+	d.Close()
 
 	for _, f := range files {
 		if f.IsDir() {

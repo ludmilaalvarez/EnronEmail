@@ -12,7 +12,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Post("/indexer", controllers.IndexerEnron)
-	r.Post("/search/{text}", controllers.SearchEmails)
+	r.Get("/search/{text}", controllers.SearchEmails)
 
 	corsOptions := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
