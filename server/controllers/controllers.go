@@ -3,7 +3,6 @@ package controllers
 import (
 	"EnronEmailApi/services"
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"net/http"
@@ -15,22 +14,19 @@ func IndexerEnron(w http.ResponseWriter, r *http.Request) {
 
 	go services.IndexStart()
 
-	w.Write([]byte("Cargando emails..."))
+	w.Write([]byte("Loading emails..."))
 }
 
 func SearchEmails(w http.ResponseWriter, r *http.Request) {
+
 	text := chi.URLParam(r, "text")
 	pageNum := r.URL.Query().Get("page")
-	fmt.Println(pageNum)
-	numero, err := strconv.Atoi(pageNum)
 
-	fmt.Println(numero)
+	numero, err := strconv.Atoi(pageNum)
 	if err != nil {
-		http.Error(w, "Número de página inválido", http.StatusBadRequest)
+		http.Error(w, "Invalid page number", http.StatusBadRequest)
 		return
 	}
-
-	fmt.Println(text)
 
 	respuesta := services.SearchEmails(&text, numero)
 

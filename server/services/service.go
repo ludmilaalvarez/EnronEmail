@@ -16,12 +16,14 @@ import (
 )
 
 func IndexStart() {
+
 	var wg sync.WaitGroup
 
 	cpu, err := os.Create("cpu.prof")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
+
 	pprof.StartCPUProfile(cpu)
 
 	defer pprof.StopCPUProfile()
@@ -33,6 +35,7 @@ func IndexStart() {
 	userList, _ := ListAllFolders(path)
 
 	numParts := 5
+
 	dividedFolders := DivideFolders(userList, numParts)
 
 	wg.Add(5)
@@ -46,50 +49,31 @@ func IndexStart() {
 	fmt.Println("Indexing finished!!!!")
 
 	runtime.GC()
+
 	mem, err := os.Create("memory.prof")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
+
 	defer mem.Close()
+
 	if err := pprof.WriteHeapProfile(mem); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 }
 
-/* func SearchEmails(text *string) models.EmailResponse {
-
-var respuesta models.EmailResponse
-now := time.Now()
-startTime := now.AddDate(0, 0, -7).Format("2006-01-02T15:04:05Z07:00")
-endTime := now.Format("2006-01-02T15:04:05Z07:00")
-
-fmt.Println(*text)
-
-query := fmt.Sprintf(`{
-	"search_type": "match",
-	"query": {
-		"term":       "`+*text+`, ",
-		"start_time": "%s",
-		"end_time":   "%s"
-	},
-	"from":        0,
-	"max_results": 20,
-	"_source":     []
-}`, startTime, endTime) */
 
 func SearchEmails(text *string, pageNum int) models.EmailResponse {
 
 	var respuesta models.EmailResponse
+
 	now := time.Now()
+
 	startTime := now.AddDate(0, 0, -7).Format("2006-01-02T15:04:05Z07:00")
 	endTime := now.Format("2006-01-02T15:04:05Z07:00")
 
-	fmt.Println(*text)
-
 	from := pageNum * 15
-	fmt.Print("from:")
-	fmt.Println(from)
 
 	query := fmt.Sprintf(`{
 			"search_type": "match",
@@ -104,6 +88,7 @@ func SearchEmails(text *string, pageNum int) models.EmailResponse {
 		}`, startTime, endTime, from)
 
 	req, err := http.NewRequest("POST", "http://localhost:4080/api/emails/_search", strings.NewReader(query))
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,8 +100,11 @@ func SearchEmails(text *string, pageNum int) models.EmailResponse {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer resp.Body.Close()
+
 	log.Println(resp.StatusCode)
+	
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)

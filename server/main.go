@@ -11,6 +11,7 @@ import (
 func main() {
 
 	r := chi.NewRouter()
+	
 	r.Post("/indexer", controllers.IndexerEnron)
 	r.Get("/search/{text}", controllers.SearchEmails)
 
